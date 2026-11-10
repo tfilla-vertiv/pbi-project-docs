@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from urllib.parse import quote, unquote
 
@@ -106,6 +107,8 @@ def render_documentation(
     report: ReportDefinition | None = None,
     report_dir_display: str = "",
     report_href: str = "",
+    report_description: str = "",
+    published: date | None = None,
 ) -> dict[str, str]:
     """Return ``relative path -> Markdown`` for every generated file."""
     renderer = Renderer(
@@ -117,6 +120,8 @@ def render_documentation(
         report=report,
         report_dir_display=report_dir_display,
         report_href=report_href,
+        report_description=report_description,
+        published=published,
     )
     return renderer.render()
 
@@ -158,6 +163,8 @@ class Renderer:
         report: ReportDefinition | None = None,
         report_dir_display: str = "",
         report_href: str = "",
+        report_description: str = "",
+        published: date | None = None,
     ):
         self.model = model
         self.model_dir_display = model_dir_display
@@ -167,6 +174,8 @@ class Renderer:
         self.report = report
         self.report_dir_display = report_dir_display
         self.report_href = report_href
+        self.report_description = report_description
+        self.published = date.today() if published is None else published
         self.source_groups = list(model.unique_sources())
         self.source_titles = _disambiguate_titles(self.source_groups)
         self.anchors: dict[tuple, str] = {}
@@ -358,6 +367,8 @@ class Renderer:
         return document([
             page.nav(),
             heading(1, self.model.name),
+            published_line(self.published),
+            report_description_section(self.report_description),
             f"Semantic model documentation generated from {self.model_location()}.",
             heading(2, "Regenerate") + "\n\n" + "\n\n".join(regenerate),
             heading(2, "Documents") + "\n\n" + "\n".join(documents),
@@ -1740,6 +1751,73 @@ def plural(count: int, noun: str) -> str:
 def esc_description(text: str) -> str:
     from .markdown import esc_prose
     return esc_prose(text)
+
+
+_DESCRIPTION_ORDERED = re.compile(r"(\d+)([.)])(?=\s)")
+
+
+_PUBLISHED_MONTHS = (
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+)
+
+
+def published_line(when: date) -> str:
+    """Date stamp for the overview. The report itself has no version number.
+
+    Month names are fixed in English so the line does not follow the machine locale.
+    """
+    month = _PUBLISHED_MONTHS[when.month - 1]
+    return f"Documentation published {month} {when.day}, {when.year}."
+
+
+def report_description_section(text: str) -> str | None:
+    """Markdown for the overview description, or ``None`` when there is no text.
+
+    The source file is plain text. Characters that Markdown would treat as
+    formatting are escaped so the overview shows the description as written.
+    A blank line separates paragraphs.
+    """
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not normalized:
+        return None
+    paragraphs: list[str] = []
+    for part in re.split(r"\n\s*\n", normalized):
+        lines = [_escape_description_line(line) for line in part.split("\n")]
+        if any(line.strip() for line in lines):
+            paragraphs.append("<br>\n".join(lines))
+    if not paragraphs:
+        return None
+    return heading(2, "Report description") + "\n\n" + "\n\n".join(paragraphs)
+
+
+def _escape_description_line(line: str) -> str:
+    text = (
+        line.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\\", "\\\\")
+    )
+    for char in "`*_[]":
+        text = text.replace(char, "\\" + char)
+    body = text.lstrip(" ")
+    indent = text[: len(text) - len(body)]
+    ordered = _DESCRIPTION_ORDERED.match(body)
+    if ordered:
+        body = ordered.group(1) + "\\" + ordered.group(2) + body[ordered.end():]
+    elif body.startswith("#") or re.match(r"[-+]\s", body) or re.fullmatch(r"-{3,}", body):
+        body = "\\" + body
+    return indent + body
 
 
 def _is_absolute_href(href: str) -> bool:

@@ -17,6 +17,20 @@ My Report/
 
 A `.pbix` file alone cannot be read. A report that connects to a remote model (`byConnection` in `definition.pbir`) needs the semantic model saved in the project as TMDL as well.
 
+## Report description
+
+To put a description on the overview page, create a text file named `report-description.txt` in the same folder as the `.pbip`. Write the description in that file, exactly as it should appear. A blank line starts a new paragraph.
+
+```text
+My Report/
+  My Report.pbip
+  report-description.txt
+  My Report.Report/
+  My Report.SemanticModel/
+```
+
+The next run copies that text into the overview (`docs/README.md` and `docs-html/README.html`) under **Report description**. If the file is missing or empty, the overview is generated without that section. The text file is left as you wrote it. Edit the text file and run the script again to change the description. Editing the generated HTML does not last, because the next run rewrites it.
+
 ## Run it
 
 1. Install [Python 3.10 or newer](https://www.python.org/downloads/) and check **Add python.exe to PATH**.
@@ -36,7 +50,11 @@ My Report/
 
 You can also unzip the contents directly next to the `.pbip`. Either layout works. The script walks upward from its own folder and uses the nearest `.pbip`.
 
-4. Double-click `run.bat`
+4. Double-click `run.bat`, or from PowerShell:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\pbi-project-docs-main\run.ps1
+```
 
 The first run installs `markdown-it-py` for the HTML export if it is not already installed. Later runs just regenerate the pages.
 
@@ -58,3 +76,18 @@ Running again rewrites the generated pages. A page under `docs/Tables/` or `docs
 | `docs-html/` | the same set as HTML | Open `README.html` in a browser |
 
 Auto-generated date tables (`LocalDateTable_*`, `DateTableTemplate_*`) are omitted. Text boxes, images, shapes, and buttons are counted on the page and do not get their own page.
+
+## Choose a project explicitly
+
+From the package folder:
+
+```powershell
+python tools/generate_docs.py --model-dir "C:\Reports\My Report\My Report.SemanticModel\definition" --report-dir "C:\Reports\My Report\My Report.Report\definition" --output-dir "C:\Reports\My Report\docs"
+python tools/export_html.py --source-dir "C:\Reports\My Report\docs" --output-dir "C:\Reports\My Report\docs-html"
+```
+
+Use this when a folder contains more than one `.pbip`.
+
+## Publish this package
+
+This folder is the whole repository. Create an empty GitHub repository and push these files. Do not include a semantic model, a report, or a generated `docs/` folder.

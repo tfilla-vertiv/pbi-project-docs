@@ -17,11 +17,13 @@ import re
 import sys
 from pathlib import Path
 
-from discover import PACKAGE_ROOT, ProjectError, discover_project
+from discover import PACKAGE_ROOT, PowerBIProject, ProjectError, discover_project
 from tmdl_docs.loader import load_model
 from tmdl_docs.render import render_documentation, write_documentation
 from tmdl_docs.report import ReportSyntaxError, load_report
 from tmdl_docs.tmdl import TmdlSyntaxError
+
+REPORT_DESCRIPTION_NAME = "report-description.txt"
 
 
 def _display_path(path: Path, root: Path) -> str:
@@ -71,6 +73,48 @@ def _parser() -> argparse.ArgumentParser:
         help="Documentation output folder. Defaults to docs/ beside the .pbip.",
     )
     return parser
+
+
+def _project_roots(project: PowerBIProject | None, model_dir: Path, report_dir: Path) -> list[Path]:
+    """Folders that may hold ``report-description.txt``, nearest project first.
+
+    The folder beside the ``.pbip`` is the parent of the ``.SemanticModel`` or
+    ``.Report`` artifact. A discovered project root is included when the paths
+    do not already name that folder.
+    """
+    roots: list[Path] = []
+    seen: set[Path] = set()
+
+    def add(path: Path) -> None:
+        resolved = path.resolve()
+        if resolved in seen:
+            return
+        seen.add(resolved)
+        roots.append(resolved)
+
+    for folder in (model_dir, report_dir):
+        artifact = folder.parent if folder.name.casefold() == "definition" else folder
+        if artifact.name.endswith(".SemanticModel") or artifact.name.endswith(".Report"):
+            add(artifact.parent)
+    if project is not None:
+        add(project.root)
+    return roots
+
+
+def _read_report_description(roots: list[Path]) -> tuple[str, Path | None]:
+    """Return the description text and the file it came from."""
+    for root in roots:
+        path = root / REPORT_DESCRIPTION_NAME
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8-sig")
+        except UnicodeError as exc:
+            raise ProjectError(f"{path} is not UTF-8 text: {exc}") from exc
+        except OSError as exc:
+            raise ProjectError(f"Could not read {path}: {exc}") from exc
+        return text, path
+    return "", None
 
 
 def _regenerate_command(base: Path, model_dir: Path, report_dir: Path, output_dir: Path, using_defaults: bool) -> str:
@@ -140,6 +184,15 @@ def main(argv: list[str] | None = None) -> int:
     if project is not None:
         print(f"Documenting {project.name}")
         print(f"  {project.root}")
+    try:
+        report_description, description_path = _read_report_description(
+            _project_roots(project, model_dir, report_dir)
+        )
+    except ProjectError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    if description_path is not None and report_description.strip():
+        print(f"Report description: {description_path}")
     model_display = _display_path(model_dir, base)
     report_display = _display_path(report_dir, base)
     files = render_documentation(
@@ -151,6 +204,7 @@ def main(argv: list[str] | None = None) -> int:
         report=report,
         report_dir_display=report_display,
         report_href=_href_from(output_dir, report_dir),
+        report_description=report_description,
     )
     result = write_documentation(output_dir, files)
     print(f"Wrote {len(result.written)} Markdown files to {output_dir}")
