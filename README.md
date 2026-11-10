@@ -36,11 +36,7 @@ My Report/
 
 You can also unzip the contents directly next to the `.pbip`. Either layout works. The script walks upward from its own folder and uses the nearest `.pbip`.
 
-4. Double-click `run.bat`, or from PowerShell:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\pbi-project-docs-main\run.ps1
-```
+4. Double-click `run.bat`
 
 The first run installs `markdown-it-py` for the HTML export if it is not already installed. Later runs just regenerate the pages.
 
@@ -62,18 +58,3 @@ Running again rewrites the generated pages. A page under `docs/Tables/` or `docs
 | `docs-html/` | the same set as HTML | Open `README.html` in a browser |
 
 Auto-generated date tables (`LocalDateTable_*`, `DateTableTemplate_*`) are omitted. Text boxes, images, shapes, and buttons are counted on the page and do not get their own page.
-
-## Choose a project explicitly
-
-From the package folder:
-
-```powershell
-python tools/generate_docs.py --model-dir "C:\Reports\My Report\My Report.SemanticModel\definition" --report-dir "C:\Reports\My Report\My Report.Report\definition" --output-dir "C:\Reports\My Report\docs"
-python tools/export_html.py --source-dir "C:\Reports\My Report\docs" --output-dir "C:\Reports\My Report\docs-html"
-```
-
-Use this when a folder contains more than one `.pbip`.
-
-## Publish this package
-
-This folder is the whole repository. Create an empty GitHub repository and push these files. Do not include a semantic model, a report, or a generated `docs/` folder.
