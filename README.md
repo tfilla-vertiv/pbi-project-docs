@@ -1,6 +1,6 @@
 # Power BI project docs
 
-Drop this folder into a Power BI project, run it, and get the same kind of documentation produced for a single report: a Markdown site under `docs/` and an HTML copy under `docs-html/`.
+Drop this folder into a Power BI project, run it, and get full report documentation: a Markdown site under `docs/` and an HTML copy under `docs-html/`.
 
 The pages cover the semantic model (tables, columns, measures, relationships, Power Query sources) and each report visual that uses model fields.
 
@@ -77,17 +77,14 @@ Running again rewrites the generated pages. A page under `docs/Tables/` or `docs
 
 Auto-generated date tables (`LocalDateTable_*`, `DateTableTemplate_*`) are omitted. Text boxes, images, shapes, and buttons are counted on the page and do not get their own page.
 
-## Choose a project explicitly
+## Save documentation to Sharepoint
 
-From the package folder:
+HTML documentation ready to be published should be saved here:
 
-```powershell
-python tools/generate_docs.py --model-dir "C:\Reports\My Report\My Report.SemanticModel\definition" --report-dir "C:\Reports\My Report\My Report.Report\definition" --output-dir "C:\Reports\My Report\docs"
-python tools/export_html.py --source-dir "C:\Reports\My Report\docs" --output-dir "C:\Reports\My Report\docs-html"
+```text
+GPDO Sharepoint/
+  Power BI Documentation/
+    Report Name/
 ```
 
-Use this when a folder contains more than one `.pbip`.
-
-## Publish this package
-
-This folder is the whole repository. Create an empty GitHub repository and push these files. Do not include a semantic model, a report, or a generated `docs/` folder.
+If this project already has documentation that you need to update, move the old documentation into a folder called Archive in the above Sharepoint directory, in a sub-folder called DD-MMM-YY (e.g. 10-Nov-26). Live documentation should go directly in the report's directory.
